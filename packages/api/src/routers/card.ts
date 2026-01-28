@@ -208,7 +208,7 @@ export const cardRouter = createTRPCRouter({
 =======
             boardId: String(list.workspaceId),
             user: ctx.user
-              ? { id: ctx.user.id, name: ctx.user.name, email: ctx.user.email }
+              ? { id: ctx.user.id, name: ctx.user.name }
               : undefined,
           },
         ),
@@ -1108,8 +1108,12 @@ export const cardRouter = createTRPCRouter({
 =======
             boardId: String(card.workspaceId),
             user: ctx.user
+<<<<<<< HEAD
               ? { id: ctx.user.id, name: ctx.user.name, email: ctx.user.email }
 >>>>>>> 48eefa9 (feat: add webhook support for card events)
+=======
+              ? { id: ctx.user.id, name: ctx.user.name }
+>>>>>>> 540d3bc (fix: address code review feedback)
               : undefined,
             changes:
               Object.keys(webhookChanges).length > 0
@@ -1225,7 +1229,7 @@ export const cardRouter = createTRPCRouter({
 =======
               boardId: String(card.workspaceId),
               user: ctx.user
-                ? { id: ctx.user.id, name: ctx.user.name, email: ctx.user.email }
+                ? { id: ctx.user.id, name: ctx.user.name }
                 : undefined,
             },
           ),

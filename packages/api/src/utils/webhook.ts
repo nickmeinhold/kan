@@ -28,10 +28,14 @@ export interface WebhookPayload {
       title: string;
       description?: string | null;
 <<<<<<< HEAD
+<<<<<<< HEAD
       dueDate?: string | null; // ISO string after JSON serialization
 =======
       dueDate?: Date | null;
 >>>>>>> 48eefa9 (feat: add webhook support for card events)
+=======
+      dueDate?: string | null; // ISO string after JSON serialization
+>>>>>>> 540d3bc (fix: address code review feedback)
       listId: string;
       boardId: string;
     };
@@ -47,9 +51,12 @@ export interface WebhookPayload {
       id: string;
       name: string | null;
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
       email: string;
 >>>>>>> 48eefa9 (feat: add webhook support for card events)
+=======
+>>>>>>> 540d3bc (fix: address code review feedback)
     };
     changes?: Record<string, { from: unknown; to: unknown }>;
   };
@@ -246,11 +253,16 @@ export async function sendWebhooksForWorkspace(
     headers["X-Webhook-Signature"] = generateSignature(body, webhookSecret);
   }
 
+  // Add timeout to prevent hanging on slow endpoints
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
   try {
     const response = await fetch(webhookUrl, {
       method: "POST",
       headers,
       body,
+      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -259,8 +271,18 @@ export async function sendWebhooksForWorkspace(
       );
     }
   } catch (error) {
+<<<<<<< HEAD
     console.error("Webhook delivery error:", error);
 >>>>>>> 48eefa9 (feat: add webhook support for card events)
+=======
+    if (error instanceof Error && error.name === "AbortError") {
+      console.error("Webhook delivery timed out");
+    } else {
+      console.error("Webhook delivery error:", error);
+    }
+  } finally {
+    clearTimeout(timeoutId);
+>>>>>>> 540d3bc (fix: address code review feedback)
   }
 }
 
@@ -281,9 +303,12 @@ export function createCardWebhookPayload(
       id: string;
       name: string | null;
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
       email: string;
 >>>>>>> 48eefa9 (feat: add webhook support for card events)
+=======
+>>>>>>> 540d3bc (fix: address code review feedback)
     };
     changes?: Record<string, { from: unknown; to: unknown }>;
   },
@@ -297,10 +322,14 @@ export function createCardWebhookPayload(
         title: card.title,
         description: card.description,
 <<<<<<< HEAD
+<<<<<<< HEAD
         dueDate: card.dueDate?.toISOString() ?? null,
 =======
         dueDate: card.dueDate,
 >>>>>>> 48eefa9 (feat: add webhook support for card events)
+=======
+        dueDate: card.dueDate?.toISOString() ?? null,
+>>>>>>> 540d3bc (fix: address code review feedback)
         listId: card.listId,
         boardId: context.boardId,
       },
