@@ -1,4 +1,5 @@
 import crypto from "crypto";
+<<<<<<< HEAD
 import { z } from "zod";
 
 import type { dbClient } from "@kan/db/client";
@@ -9,6 +10,14 @@ import { createLogger } from "@kan/logger";
 const log = createLogger("webhook");
 
 export type WebhookEventType = WebhookEvent;
+=======
+
+export type WebhookEventType =
+  | "card.created"
+  | "card.updated"
+  | "card.deleted"
+  | "card.moved";
+>>>>>>> 48eefa9 (feat: add webhook support for card events)
 
 export interface WebhookPayload {
   event: WebhookEventType;
@@ -18,7 +27,11 @@ export interface WebhookPayload {
       id: string;
       title: string;
       description?: string | null;
+<<<<<<< HEAD
       dueDate?: string | null; // ISO string after JSON serialization
+=======
+      dueDate?: Date | null;
+>>>>>>> 48eefa9 (feat: add webhook support for card events)
       listId: string;
       boardId: string;
     };
@@ -33,6 +46,10 @@ export interface WebhookPayload {
     user?: {
       id: string;
       name: string | null;
+<<<<<<< HEAD
+=======
+      email: string;
+>>>>>>> 48eefa9 (feat: add webhook support for card events)
     };
     changes?: Record<string, { from: unknown; to: unknown }>;
   };
@@ -42,6 +59,7 @@ function generateSignature(payload: string, secret: string): string {
   return crypto.createHmac("sha256", secret).update(payload).digest("hex");
 }
 
+<<<<<<< HEAD
 /**
  * Zod schema for webhook URLs with SSRF mitigation.
  * Requires HTTPS and blocks private/internal IP ranges, localhost,
@@ -129,6 +147,14 @@ export async function sendWebhookToUrl(
   const result = webhookUrlSchema.safeParse(url);
   if (!result.success) {
     return { success: false, error: result.error.issues[0]?.message };
+=======
+export async function sendWebhook(payload: WebhookPayload): Promise<void> {
+  const webhookUrl = process.env.WEBHOOK_URL;
+  const webhookSecret = process.env.WEBHOOK_SECRET;
+
+  if (!webhookUrl) {
+    return;
+>>>>>>> 48eefa9 (feat: add webhook support for card events)
   }
 
   const body = JSON.stringify(payload);
@@ -138,6 +164,7 @@ export async function sendWebhookToUrl(
     "X-Webhook-Timestamp": payload.timestamp,
   };
 
+<<<<<<< HEAD
   if (secret) {
     headers["X-Webhook-Signature"] = generateSignature(body, secret);
   }
@@ -214,6 +241,26 @@ export async function sendWebhooksForWorkspace(
     await Promise.allSettled(promises);
   } catch (error) {
     log.error({ err: error, workspaceId }, "Failed to send webhooks for workspace");
+=======
+  if (webhookSecret) {
+    headers["X-Webhook-Signature"] = generateSignature(body, webhookSecret);
+  }
+
+  try {
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers,
+      body,
+    });
+
+    if (!response.ok) {
+      console.error(
+        `Webhook delivery failed: ${response.status} ${response.statusText}`,
+      );
+    }
+  } catch (error) {
+    console.error("Webhook delivery error:", error);
+>>>>>>> 48eefa9 (feat: add webhook support for card events)
   }
 }
 
@@ -233,6 +280,10 @@ export function createCardWebhookPayload(
     user?: {
       id: string;
       name: string | null;
+<<<<<<< HEAD
+=======
+      email: string;
+>>>>>>> 48eefa9 (feat: add webhook support for card events)
     };
     changes?: Record<string, { from: unknown; to: unknown }>;
   },
@@ -245,7 +296,11 @@ export function createCardWebhookPayload(
         id: card.id,
         title: card.title,
         description: card.description,
+<<<<<<< HEAD
         dueDate: card.dueDate?.toISOString() ?? null,
+=======
+        dueDate: card.dueDate,
+>>>>>>> 48eefa9 (feat: add webhook support for card events)
         listId: card.listId,
         boardId: context.boardId,
       },
