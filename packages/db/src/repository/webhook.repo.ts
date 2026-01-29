@@ -11,6 +11,7 @@ function parseEvents(raw: string): WebhookEvent[] {
   return JSON.parse(raw) as WebhookEvent[];
 }
 
+
 export const create = async (
   db: dbClient,
   webhookInput: {
@@ -145,6 +146,7 @@ export const getAllByWorkspaceId = async (
  * DO NOT expose this via tRPC or any client-facing endpoint.
  * Use getAllByWorkspaceId (which omits secrets) for the admin list endpoint.
  */
+
 export const getActiveByWorkspaceId = async (
   db: dbClient,
   workspaceId: number,
