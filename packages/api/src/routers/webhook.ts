@@ -6,12 +6,16 @@ import * as workspaceRepo from "@kan/db/repository/workspace.repo";
 import { webhookEvents } from "@kan/db/schema";
 
 import { createTRPCRouter, protectedProcedure } from "../trpc";
+<<<<<<< HEAD
 import { assertPermission } from "../utils/permissions";
 import {
   webhookUrlSchema,
   sendWebhookToUrl,
   createCardWebhookPayload,
 } from "../utils/webhook";
+=======
+import { assertUserInWorkspace } from "../utils/auth";
+>>>>>>> a6fbf50 (feat(api): add webhook CRUD API router)
 
 const webhookEventSchema = z.enum(webhookEvents);
 
@@ -61,7 +65,11 @@ export const webhookRouter = createTRPCRouter({
           code: "NOT_FOUND",
         });
 
+<<<<<<< HEAD
       await assertPermission(ctx.db, userId, workspace.id, "workspace:manage");
+=======
+      await assertUserInWorkspace(ctx.db, userId, workspace.id, "admin");
+>>>>>>> a6fbf50 (feat(api): add webhook CRUD API router)
 
       return webhookRepo.getAllByWorkspaceId(ctx.db, workspace.id);
     }),
@@ -81,7 +89,11 @@ export const webhookRouter = createTRPCRouter({
       z.object({
         workspacePublicId: z.string().min(12),
         name: z.string().min(1).max(255),
+<<<<<<< HEAD
         url: webhookUrlSchema,
+=======
+        url: z.string().url().max(2048),
+>>>>>>> a6fbf50 (feat(api): add webhook CRUD API router)
         secret: z.string().max(512).optional(),
         events: z.array(webhookEventSchema).min(1),
       }),
@@ -116,7 +128,11 @@ export const webhookRouter = createTRPCRouter({
           code: "NOT_FOUND",
         });
 
+<<<<<<< HEAD
       await assertPermission(ctx.db, userId, workspace.id, "workspace:manage");
+=======
+      await assertUserInWorkspace(ctx.db, userId, workspace.id, "admin");
+>>>>>>> a6fbf50 (feat(api): add webhook CRUD API router)
 
       const result = await webhookRepo.create(ctx.db, {
         workspaceId: workspace.id,
@@ -152,7 +168,11 @@ export const webhookRouter = createTRPCRouter({
         workspacePublicId: z.string().min(12),
         webhookPublicId: z.string().min(12),
         name: z.string().min(1).max(255).optional(),
+<<<<<<< HEAD
         url: webhookUrlSchema.optional(),
+=======
+        url: z.string().url().max(2048).optional(),
+>>>>>>> a6fbf50 (feat(api): add webhook CRUD API router)
         secret: z.string().max(512).optional(),
         events: z.array(webhookEventSchema).min(1).optional(),
         active: z.boolean().optional(),
@@ -189,7 +209,11 @@ export const webhookRouter = createTRPCRouter({
           code: "NOT_FOUND",
         });
 
+<<<<<<< HEAD
       await assertPermission(ctx.db, userId, workspace.id, "workspace:manage");
+=======
+      await assertUserInWorkspace(ctx.db, userId, workspace.id, "admin");
+>>>>>>> a6fbf50 (feat(api): add webhook CRUD API router)
 
       const webhook = await webhookRepo.getByPublicId(
         ctx.db,
@@ -257,7 +281,11 @@ export const webhookRouter = createTRPCRouter({
           code: "NOT_FOUND",
         });
 
+<<<<<<< HEAD
       await assertPermission(ctx.db, userId, workspace.id, "workspace:manage");
+=======
+      await assertUserInWorkspace(ctx.db, userId, workspace.id, "admin");
+>>>>>>> a6fbf50 (feat(api): add webhook CRUD API router)
 
       const webhook = await webhookRepo.getByPublicId(
         ctx.db,
@@ -319,7 +347,11 @@ export const webhookRouter = createTRPCRouter({
           code: "NOT_FOUND",
         });
 
+<<<<<<< HEAD
       await assertPermission(ctx.db, userId, workspace.id, "workspace:manage");
+=======
+      await assertUserInWorkspace(ctx.db, userId, workspace.id, "admin");
+>>>>>>> a6fbf50 (feat(api): add webhook CRUD API router)
 
       const webhook = await webhookRepo.getByPublicId(
         ctx.db,
@@ -332,6 +364,14 @@ export const webhookRouter = createTRPCRouter({
           code: "NOT_FOUND",
         });
 
+<<<<<<< HEAD
+=======
+      // Import sendWebhookToUrl dynamically to avoid circular dependencies
+      const { sendWebhookToUrl, createCardWebhookPayload } = await import(
+        "../utils/webhook"
+      );
+
+>>>>>>> a6fbf50 (feat(api): add webhook CRUD API router)
       const testPayload = createCardWebhookPayload("card.created", {
         id: "test-card-id",
         title: "Test Card",
