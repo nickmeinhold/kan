@@ -15,13 +15,19 @@ import { sendMentionEmails } from "../utils/notifications";
 import { assertCanDelete, assertCanEdit, assertPermission } from "../utils/permissions";
 import { generateAttachmentUrl, generateAvatarUrl } from "@kan/shared/utils";
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> c7aa804 (refactor(api): use sendWebhooksForWorkspace in card router)
 import {
   createCardWebhookPayload,
   sendWebhooksForWorkspace,
 } from "../utils/webhook";
+<<<<<<< HEAD
 =======
 import { createCardWebhookPayload, sendWebhook } from "../utils/webhook";
 >>>>>>> 48eefa9 (feat: add webhook support for card events)
+=======
+>>>>>>> c7aa804 (refactor(api): use sendWebhooksForWorkspace in card router)
 
 export const cardRouter = createTRPCRouter({
   create: protectedProcedure
@@ -175,6 +181,7 @@ export const cardRouter = createTRPCRouter({
       }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
       // Fire webhooks (non-blocking)
       sendWebhooksForWorkspace(
         ctx.db,
@@ -183,6 +190,12 @@ export const cardRouter = createTRPCRouter({
       // Fire webhook (non-blocking)
       void sendWebhook(
 >>>>>>> 48eefa9 (feat: add webhook support for card events)
+=======
+      // Fire webhooks (non-blocking)
+      void sendWebhooksForWorkspace(
+        ctx.db,
+        list.workspaceId,
+>>>>>>> c7aa804 (refactor(api): use sendWebhooksForWorkspace in card router)
         createCardWebhookPayload(
           "card.created",
           {
@@ -1079,6 +1092,7 @@ export const cardRouter = createTRPCRouter({
       }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
       // Fire webhooks (non-blocking)
       sendWebhooksForWorkspace(
         ctx.db,
@@ -1087,6 +1101,12 @@ export const cardRouter = createTRPCRouter({
       // Fire webhook (non-blocking)
       void sendWebhook(
 >>>>>>> 48eefa9 (feat: add webhook support for card events)
+=======
+      // Fire webhooks (non-blocking)
+      void sendWebhooksForWorkspace(
+        ctx.db,
+        card.workspaceId,
+>>>>>>> c7aa804 (refactor(api): use sendWebhooksForWorkspace in card router)
         createCardWebhookPayload(
           newListId && existingCard.listId !== newListId
             ? "card.moved"
@@ -1194,6 +1214,7 @@ export const cardRouter = createTRPCRouter({
       });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
       // Fire webhooks (non-blocking)
       if (fullCard) {
         sendWebhooksForWorkspace(
@@ -1204,6 +1225,13 @@ export const cardRouter = createTRPCRouter({
       if (fullCard) {
         void sendWebhook(
 >>>>>>> 48eefa9 (feat: add webhook support for card events)
+=======
+      // Fire webhooks (non-blocking)
+      if (fullCard) {
+        void sendWebhooksForWorkspace(
+          ctx.db,
+          card.workspaceId,
+>>>>>>> c7aa804 (refactor(api): use sendWebhooksForWorkspace in card router)
           createCardWebhookPayload(
             "card.deleted",
             {
