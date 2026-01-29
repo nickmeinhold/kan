@@ -5,14 +5,27 @@ import { Controller, useForm } from "react-hook-form";
 import { HiXMark } from "react-icons/hi2";
 import { z } from "zod";
 
+<<<<<<< HEAD
 import { webhookEvents } from "@kan/db/schema";
 
+=======
+>>>>>>> d94828b (feat(web): add webhook management UI components)
 import Button from "~/components/Button";
 import Input from "~/components/Input";
 import { useModal } from "~/providers/modal";
 import { usePopup } from "~/providers/popup";
 import { api } from "~/utils/api";
 
+<<<<<<< HEAD
+=======
+const webhookEvents = [
+  "card.created",
+  "card.updated",
+  "card.moved",
+  "card.deleted",
+] as const;
+
+>>>>>>> d94828b (feat(web): add webhook management UI components)
 const newWebhookSchema = z.object({
   name: z
     .string()
@@ -64,7 +77,11 @@ export function NewWebhookModal({
       name: "",
       url: "",
       secret: "",
+<<<<<<< HEAD
       events: [...webhookEvents],
+=======
+      events: ["card.created", "card.updated", "card.moved", "card.deleted"],
+>>>>>>> d94828b (feat(web): add webhook management UI components)
       active: true,
     },
   });
@@ -83,7 +100,11 @@ export function NewWebhookModal({
         name: "",
         url: "",
         secret: "",
+<<<<<<< HEAD
         events: [...webhookEvents],
+=======
+        events: ["card.created", "card.updated", "card.moved", "card.deleted"],
+>>>>>>> d94828b (feat(web): add webhook management UI components)
         active: true,
       });
     }
