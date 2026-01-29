@@ -187,6 +187,7 @@
     {
       "idx": 26,
       "version": "7",
+<<<<<<< HEAD
       "when": 1770521594167,
       "tag": "20260208033314_AddAttachmentToActivity",
       "breakpoints": true
@@ -225,6 +226,11 @@
       "when": 1775170588247,
       "tag": "20260402225628_AddTeamWorkspacePlan",
       "breakpoints": true
+=======
+      "when": 1738188000000,
+      "tag": "20260129210000_AddWorkspaceWebhooks",
+      "breakpoints": true
+>>>>>>> c15020a (chore(db): add workspace_webhooks table schema)
     }
   ]
 }

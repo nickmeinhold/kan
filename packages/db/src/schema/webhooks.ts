@@ -3,7 +3,11 @@ import {
   bigint,
   bigserial,
   boolean,
+<<<<<<< HEAD
   index,
+=======
+  pgEnum,
+>>>>>>> c15020a (chore(db): add workspace_webhooks table schema)
   pgTable,
   text,
   timestamp,
@@ -21,6 +25,10 @@ export const webhookEvents = [
   "card.deleted",
 ] as const;
 export type WebhookEvent = (typeof webhookEvents)[number];
+<<<<<<< HEAD
+=======
+export const webhookEventEnum = pgEnum("webhook_event", webhookEvents);
+>>>>>>> c15020a (chore(db): add workspace_webhooks table schema)
 
 export const workspaceWebhooks = pgTable("workspace_webhooks", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
@@ -38,9 +46,13 @@ export const workspaceWebhooks = pgTable("workspace_webhooks", {
     .references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt"),
+<<<<<<< HEAD
 }, (table) => [
   index("workspace_webhooks_workspace_idx").on(table.workspaceId),
 ]).enableRLS();
+=======
+}).enableRLS();
+>>>>>>> c15020a (chore(db): add workspace_webhooks table schema)
 
 export const workspaceWebhooksRelations = relations(
   workspaceWebhooks,
