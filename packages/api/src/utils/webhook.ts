@@ -231,6 +231,7 @@ export async function sendWebhooksForWorkspace(
       w.events.includes(payload.event),
     );
 
+<<<<<<< HEAD
     // Send to all subscribed webhooks in parallel (fire and forget)
     const promises = webhooksForEvent.map((webhook) =>
       sendWebhookToUrl(webhook.url, webhook.secret ?? undefined, payload).then(
@@ -256,6 +257,25 @@ export async function sendWebhooksForWorkspace(
   // Add timeout to prevent hanging on slow endpoints
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+=======
+  // Filter to webhooks that are subscribed to this event
+  const subscribedWebhooks = webhooks.filter((webhook) =>
+    webhook.events.includes(payload.event as (typeof webhook.events)[number]),
+  );
+
+  // Send to all webhooks in parallel (fire and forget)
+  const promises = subscribedWebhooks.map((webhook) =>
+    sendWebhookToUrl(webhook.url, webhook.secret ?? undefined, payload).then(
+      (result) => {
+        if (!result.success) {
+          console.error(
+            `Webhook delivery failed to ${webhook.url}: ${result.error}`,
+          );
+        }
+      },
+    ),
+  );
+>>>>>>> 412f0ea (refactor(api): remove legacy env var webhook support)
 
   try {
     const response = await fetch(webhookUrl, {
@@ -265,6 +285,7 @@ export async function sendWebhooksForWorkspace(
       signal: controller.signal,
     });
 
+<<<<<<< HEAD
     if (!response.ok) {
       console.error(
         `Webhook delivery failed: ${response.status} ${response.statusText}`,
@@ -286,6 +307,8 @@ export async function sendWebhooksForWorkspace(
   }
 }
 
+=======
+>>>>>>> 412f0ea (refactor(api): remove legacy env var webhook support)
 export function createCardWebhookPayload(
   event: WebhookEventType,
   card: {
