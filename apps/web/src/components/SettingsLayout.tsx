@@ -69,7 +69,11 @@ export function SettingsLayout({ children, currentTab }: SettingsLayoutProps) {
       key: "webhooks",
       icon: <HiOutlineBolt />,
       label: t`Webhooks`,
+<<<<<<< HEAD
       condition: isAdmin,
+=======
+      condition: true,
+>>>>>>> 0a39220 (feat(web): add webhooks settings page and navigation)
     },
     {
       key: "integrations",
