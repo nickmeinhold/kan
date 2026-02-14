@@ -440,6 +440,7 @@ export default function Editor({
   content,
   onChange,
   onBlur,
+  onModEnter,
   readOnly = false,
   workspaceMembers,
   enableYouTubeEmbed = true,
@@ -449,6 +450,7 @@ export default function Editor({
   content: string | null;
   onChange?: (value: string) => void;
   onBlur?: () => void;
+  onModEnter?: () => void;
   readOnly?: boolean;
   workspaceMembers: WorkspaceMember[];
   enableYouTubeEmbed?: boolean;
@@ -569,6 +571,18 @@ export default function Editor({
       editorProps: {
         attributes: {
           class: "outline-none focus:outline-none focus-visible:ring-0",
+        },
+        handleKeyDown: (_view, event) => {
+          if (
+            onModEnter &&
+            event.key === "Enter" &&
+            (event.metaKey || event.ctrlKey)
+          ) {
+            event.preventDefault();
+            onModEnter();
+            return true;
+          }
+          return false;
         },
       },
       editable: !readOnly,
