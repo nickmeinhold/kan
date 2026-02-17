@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 
 import type { dbClient } from "@kan/db/client";
 import { workspaceWebhooks } from "@kan/db/schema";
@@ -94,18 +94,6 @@ export const update = async (
 
 export const getByPublicId = async (db: dbClient, webhookPublicId: string) => {
   const result = await db.query.workspaceWebhooks.findFirst({
-    columns: {
-      id: true,
-      publicId: true,
-      workspaceId: true,
-      name: true,
-      url: true,
-      secret: true,
-      events: true,
-      active: true,
-      createdAt: true,
-      updatedAt: true,
-    },
     where: eq(workspaceWebhooks.publicId, webhookPublicId),
   });
 
@@ -142,13 +130,23 @@ export const getAllByWorkspaceId = async (
 
 /**
  * Returns active webhooks with secrets for server-side delivery (HMAC signing).
+ * Optionally filters to webhooks subscribed to a specific event at the DB level.
  * DO NOT expose this via tRPC or any client-facing endpoint.
  * Use getAllByWorkspaceId (which omits secrets) for the admin list endpoint.
  */
 export const getActiveByWorkspaceId = async (
   db: dbClient,
   workspaceId: number,
+  event?: WebhookEvent,
 ) => {
+  const conditions = [
+    eq(workspaceWebhooks.workspaceId, workspaceId),
+    eq(workspaceWebhooks.active, true),
+    // Events are stored as a JSON array string, e.g. '["card.created","card.updated"]'.
+    // Use LIKE to filter rows whose events column contains the target event.
+    ...(event ? [like(workspaceWebhooks.events, `%"${event}"%`)] : []),
+  ];
+
   const results = await db.query.workspaceWebhooks.findMany({
     columns: {
       publicId: true,
@@ -156,10 +154,7 @@ export const getActiveByWorkspaceId = async (
       secret: true,
       events: true,
     },
-    where: and(
-      eq(workspaceWebhooks.workspaceId, workspaceId),
-      eq(workspaceWebhooks.active, true),
-    ),
+    where: and(...conditions),
   });
 
   return results.map((webhook) => ({
