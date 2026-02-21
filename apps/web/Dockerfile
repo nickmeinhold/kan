@@ -64,7 +64,9 @@ COPY --from=pruner /app/AUTO_VERSION /tmp/AUTO_VERSION
 ENV NEXT_PUBLIC_USE_STANDALONE_OUTPUT=true
 ENV CI=true
 
-RUN VERSION="${APP_VERSION:-$(cat /tmp/AUTO_VERSION 2>/dev/null | tr -d '\n\r' || echo 'unknown')}" && \
+RUN --mount=type=cache,id=turbo,target=/app/node_modules/.cache/turbo \
+    --mount=type=cache,id=nextcache,target=/app/apps/web/.next/cache \
+    VERSION="${APP_VERSION:-$(cat /tmp/AUTO_VERSION 2>/dev/null | tr -d '\n\r' || echo 'unknown')}" && \
     NEXT_PUBLIC_APP_VERSION="$VERSION" pnpm build --filter=@kan/web
 
 # ============================================

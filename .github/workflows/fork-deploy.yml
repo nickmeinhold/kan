@@ -1,0 +1,75 @@
+name: Fork Deploy
+
+on:
+  push:
+    branches: ["deploy/combined"]
+    paths-ignore:
+      - "*.md"
+      - "**/*.md"
+      - "LICENSE"
+      - ".gitignore"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
+
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=deploy-combined
+            type=sha,prefix=sha-,format=short
+
+      - name: Extract version
+        id: version
+        run: |
+          GIT_DESCRIBE=$(git describe --tags --always --long 2>/dev/null || echo "")
+          if [[ -n "$GIT_DESCRIBE" && "$GIT_DESCRIBE" =~ ^v?([0-9]+\.[0-9]+\.[0-9]+)-[0-9]+-g([a-f0-9]+)$ ]]; then
+            VERSION="${BASH_REMATCH[1]}+${BASH_REMATCH[2]:0:7}"
+          elif [[ -n "$GIT_DESCRIBE" && "$GIT_DESCRIBE" =~ ^v?([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+          else
+            VERSION="${{ github.sha }}"
+            VERSION="${VERSION:0:7}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_VERSION=${{ steps.version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

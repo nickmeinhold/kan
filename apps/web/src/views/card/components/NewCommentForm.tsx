@@ -63,6 +63,7 @@ const NewCommentForm = ({
       <Editor
         content={watch("comment")}
         onChange={(value) => setValue("comment", value)}
+        onModEnter={handleSubmit(onSubmit)}
         workspaceMembers={workspaceMembers}
         enableYouTubeEmbed={false}
         placeholder={t`Add comment... (type '/' to open commands or '@' to mention)`}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { t } from "@lingui/core/macro";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { IoChevronForwardSharp } from "react-icons/io5";
 import { HiXMark } from "react-icons/hi2";
@@ -18,6 +18,10 @@ import { NewWorkspaceForm } from "~/components/NewWorkspaceForm";
 import { PageHead } from "~/components/PageHead";
 import { EditYouTubeModal } from "~/components/YouTubeEmbed/EditYouTubeModal";
 import { usePermissions } from "~/hooks/usePermissions";
+import {
+  useKeyboardShortcut,
+  type KeyboardShortcut,
+} from "~/providers/keyboard-shortcuts";
 import { useModal } from "~/providers/modal";
 import { usePopup } from "~/providers/popup";
 import { useWorkspace } from "~/providers/workspace";
@@ -200,6 +204,25 @@ export default function CardPage({ isTemplate }: { isTemplate?: boolean }) {
   const board = card?.list.board;
   const workspaceMembers = board?.workspace.members;
   const boardId = board?.publicId;
+
+  const navigateToBoard = useCallback(() => {
+    if (!isOpen && boardId) {
+      const boardPath = isTemplate ? "templates" : "boards";
+      void router.push(`/${boardPath}/${boardId}`);
+    }
+  }, [isOpen, isTemplate, boardId, router]);
+
+  const escShortcut = useMemo(
+    (): KeyboardShortcut => ({
+      type: "PRESS",
+      stroke: { key: "Escape" },
+      action: navigateToBoard,
+      description: t`Close card`,
+      group: "NAVIGATION",
+    }),
+    [navigateToBoard],
+  );
+  useKeyboardShortcut(escShortcut);
 
   const editorWorkspaceMembers =
     workspaceMembers
