@@ -16,14 +16,14 @@ export default withRateLimit(
     const openApiHandler = createOpenApiNextHandler({
       router: appRouter,
       createContext: createRESTContext,
-      onError:
-        env.NODE_ENV === "development"
-          ? ({ path, error }) => {
-              console.error(
-                `❌ REST failed on ${path ?? "<no-path>"}: ${error.message}`,
-              );
-            }
-          : undefined,
+      onError: ({ path, error }) => {
+        console.error(
+          `REST failed on ${path ?? "<no-path>"}: ${error.message}`,
+        );
+        if (env.NODE_ENV === "development") {
+          console.error(error);
+        }
+      },
     });
 
     return await openApiHandler(req, res);
