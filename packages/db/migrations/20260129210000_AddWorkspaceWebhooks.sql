@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-=======
-CREATE TYPE "public"."webhook_event" AS ENUM('card.created', 'card.updated', 'card.moved', 'card.deleted');--> statement-breakpoint
->>>>>>> c15020a (chore(db): add workspace_webhooks table schema)
 CREATE TABLE IF NOT EXISTS "workspace_webhooks" (
 	"id" bigserial PRIMARY KEY NOT NULL,
 	"publicId" varchar(12) NOT NULL,
@@ -18,10 +14,7 @@ CREATE TABLE IF NOT EXISTS "workspace_webhooks" (
 );
 --> statement-breakpoint
 ALTER TABLE "workspace_webhooks" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
-<<<<<<< HEAD
 CREATE INDEX IF NOT EXISTS "workspace_webhooks_workspace_idx" ON "workspace_webhooks" USING btree ("workspaceId");--> statement-breakpoint
-=======
->>>>>>> c15020a (chore(db): add workspace_webhooks table schema)
 DO $$ BEGIN
  ALTER TABLE "workspace_webhooks" ADD CONSTRAINT "workspace_webhooks_workspaceId_workspace_id_fk" FOREIGN KEY ("workspaceId") REFERENCES "public"."workspace"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION

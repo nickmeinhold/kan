@@ -13,22 +13,13 @@ vi.mock("@kan/db/repository/workspace.repo", () => ({
   getByPublicId: vi.fn(),
 }));
 
-<<<<<<< HEAD
 vi.mock("../utils/permissions", () => ({
   assertPermission: vi.fn(),
-=======
-vi.mock("../utils/auth", () => ({
-  assertUserInWorkspace: vi.fn(),
->>>>>>> 10d4b3c (test(api): add webhook utility and router tests)
 }));
 
 import * as webhookRepo from "@kan/db/repository/webhook.repo";
 import * as workspaceRepo from "@kan/db/repository/workspace.repo";
-<<<<<<< HEAD
 import { assertPermission } from "../utils/permissions";
-=======
-import { assertUserInWorkspace } from "../utils/auth";
->>>>>>> 10d4b3c (test(api): add webhook utility and router tests)
 
 const mockGetAllByWorkspaceId = webhookRepo.getAllByWorkspaceId as ReturnType<typeof vi.fn>;
 const mockGetByPublicId = webhookRepo.getByPublicId as ReturnType<typeof vi.fn>;
@@ -36,11 +27,7 @@ const mockCreate = webhookRepo.create as ReturnType<typeof vi.fn>;
 const mockUpdate = webhookRepo.update as ReturnType<typeof vi.fn>;
 const mockHardDelete = webhookRepo.hardDelete as ReturnType<typeof vi.fn>;
 const mockWorkspaceGetByPublicId = workspaceRepo.getByPublicId as ReturnType<typeof vi.fn>;
-<<<<<<< HEAD
 const mockAssertPermission = assertPermission as ReturnType<typeof vi.fn>;
-=======
-const mockAssertUserInWorkspace = assertUserInWorkspace as ReturnType<typeof vi.fn>;
->>>>>>> 10d4b3c (test(api): add webhook utility and router tests)
 
 // We need to import the router after mocks are set up
 // Testing approach: call the internal handler logic through a test wrapper
@@ -63,11 +50,7 @@ describe("webhook router", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-<<<<<<< HEAD
     mockAssertPermission.mockResolvedValue(undefined);
-=======
-    mockAssertUserInWorkspace.mockResolvedValue(undefined);
->>>>>>> 10d4b3c (test(api): add webhook utility and router tests)
   });
 
   describe("authorization", () => {
@@ -100,11 +83,7 @@ describe("webhook router", () => {
       ).rejects.toThrow(TRPCError);
     });
 
-<<<<<<< HEAD
     it("checks workspace:manage permission via assertPermission", async () => {
-=======
-    it("checks admin role via assertUserInWorkspace", async () => {
->>>>>>> 10d4b3c (test(api): add webhook utility and router tests)
       const { webhookRouter } = await import("./webhook");
 
       mockWorkspaceGetByPublicId.mockResolvedValueOnce(mockWorkspace);
@@ -117,19 +96,11 @@ describe("webhook router", () => {
 
       await webhookRouter.createCaller(ctx).list({ workspacePublicId: "ws-123456789" });
 
-<<<<<<< HEAD
       expect(mockAssertPermission).toHaveBeenCalledWith(
         mockDb,
         mockUser.id,
         mockWorkspace.id,
         "workspace:manage",
-=======
-      expect(mockAssertUserInWorkspace).toHaveBeenCalledWith(
-        mockDb,
-        mockUser.id,
-        mockWorkspace.id,
-        "admin",
->>>>>>> 10d4b3c (test(api): add webhook utility and router tests)
       );
     });
   });
@@ -151,11 +122,7 @@ describe("webhook router", () => {
       });
 
       expect(result).toHaveLength(1);
-<<<<<<< HEAD
       expect(result[0]!.name).toBe("My Webhook");
-=======
-      expect(result[0].name).toBe("My Webhook");
->>>>>>> 10d4b3c (test(api): add webhook utility and router tests)
       expect(mockGetAllByWorkspaceId).toHaveBeenCalledWith(mockDb, mockWorkspace.id);
     });
 

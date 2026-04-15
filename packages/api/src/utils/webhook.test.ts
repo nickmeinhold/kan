@@ -9,10 +9,7 @@ import {
   sendWebhookToUrl,
   sendWebhooksForWorkspace,
   createCardWebhookPayload,
-<<<<<<< HEAD
   webhookUrlSchema,
-=======
->>>>>>> 10d4b3c (test(api): add webhook utility and router tests)
   type WebhookPayload,
 } from "./webhook";
 
@@ -184,7 +181,6 @@ describe("webhook utilities", () => {
       },
     };
 
-<<<<<<< HEAD
     describe("SSRF protection", () => {
       it("blocks HTTP URLs", async () => {
         const result = await sendWebhookToUrl("http://example.com/webhook", undefined, mockPayload);
@@ -234,8 +230,6 @@ describe("webhook utilities", () => {
       });
     });
 
-=======
->>>>>>> 10d4b3c (test(api): add webhook utility and router tests)
     it("sends POST request with correct headers", async () => {
       (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
@@ -410,14 +404,11 @@ describe("webhook utilities", () => {
 
       await sendWebhooksForWorkspace(mockDb, 1, mockPayload);
 
-<<<<<<< HEAD
       // getActiveByWorkspaceId fetches all active webhooks; event filtering is client-side
       expect(mockGetActiveByWorkspaceId).toHaveBeenCalledWith(
         mockDb,
         1,
       );
-=======
->>>>>>> 10d4b3c (test(api): add webhook utility and router tests)
       expect(global.fetch).toHaveBeenCalledTimes(2);
       expect(global.fetch).toHaveBeenCalledWith(
         "https://example.com/webhook1",
@@ -429,7 +420,6 @@ describe("webhook utilities", () => {
       );
     });
 
-<<<<<<< HEAD
     it("does not send when no webhooks match the event (client-side filtering)", async () => {
       // Returns webhooks that don't match the event — client-side filter excludes them
       mockGetActiveByWorkspaceId.mockResolvedValueOnce([]);
@@ -440,22 +430,6 @@ describe("webhook utilities", () => {
         mockDb,
         1,
       );
-=======
-    it("does not send to webhooks not subscribed to the event", async () => {
-      mockGetActiveByWorkspaceId.mockResolvedValueOnce([
-        {
-          id: 1,
-          publicId: "wh-1",
-          url: "https://example.com/webhook1",
-          secret: null,
-          events: ["card.deleted"], // Not subscribed to card.created
-          active: true,
-        },
-      ]);
-
-      await sendWebhooksForWorkspace(mockDb, 1, mockPayload);
-
->>>>>>> 10d4b3c (test(api): add webhook utility and router tests)
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
@@ -502,7 +476,6 @@ describe("webhook utilities", () => {
 
       expect(global.fetch).not.toHaveBeenCalled();
     });
-<<<<<<< HEAD
 
     it("catches and logs DB errors without throwing", async () => {
       const consoleSpy = vi
@@ -549,7 +522,5 @@ describe("webhook utilities", () => {
     it("rejects cloud metadata endpoints", () => {
       expect(webhookUrlSchema.safeParse("https://169.254.169.254/latest").success).toBe(false);
     });
-=======
->>>>>>> 10d4b3c (test(api): add webhook utility and router tests)
   });
 });
