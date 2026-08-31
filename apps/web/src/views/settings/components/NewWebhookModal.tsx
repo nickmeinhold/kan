@@ -16,6 +16,14 @@ import { api } from "~/utils/api";
 
 // Typed by WebhookFormat, so adding a format without a label fails the build
 // rather than rendering a blank option.
+// modalState is Record<string, any>, so nothing upstream guarantees this is a
+// real format. Validate at the boundary: an unrecognised value must not be
+// silently rewritten to "generic" on save, which would retune a working
+// webhook back to the payload shape its target rejects.
+const isWebhookFormat = (value: unknown): value is WebhookFormat =>
+  typeof value === "string" &&
+  (webhookFormats as readonly string[]).includes(value);
+
 const formatLabels: Record<WebhookFormat, string> = {
   generic: "Generic JSON (default)",
   discord: "Discord",
@@ -73,7 +81,7 @@ export function NewWebhookModal({
     handleSubmit,
     control,
     reset,
-    formState: { errors },
+    formState: { errors, dirtyFields },
   } = useForm<WebhookFormData>({
     resolver: zodResolver(newWebhookSchema),
     defaultValues: {
@@ -93,7 +101,9 @@ export function NewWebhookModal({
         url: modalState.url ?? "",
         secret: "",
         events: modalState.events ?? ["card.created"],
-        format: modalState.format ?? "generic",
+        format: isWebhookFormat(modalState.format)
+          ? modalState.format
+          : "generic",
         active: modalState.active ?? true,
       });
     } else if (!isEdit) {
@@ -191,7 +201,13 @@ export function NewWebhookModal({
         url: data.url,
         secret: data.secret || undefined,
         events: data.events,
-        format: data.format,
+        // Omitting format leaves the stored value untouched. Only write it when
+        // the modal was seeded with a real one or the user picked one, so a
+        // stale modal cannot silently downgrade the webhook to generic.
+        format:
+          isWebhookFormat(modalState?.format) || dirtyFields.format
+            ? data.format
+            : undefined,
         active: data.active,
       });
     } else {

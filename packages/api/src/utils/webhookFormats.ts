@@ -7,15 +7,22 @@ import type { WebhookPayload } from "./webhook";
 // failure this module exists to prevent.
 const DISCORD_TITLE_MAX = 256;
 const DISCORD_DESCRIPTION_MAX = 4096;
-const GOOGLE_CHAT_TEXT_MAX = 4096;
-const SLACK_TEXT_MAX = 40000;
+// Google does not document whether its 4096 ceiling counts characters or bytes,
+// so this budget is spent in UTF-8 bytes: the stricter reading is safe under
+// either, and a CJK title would exceed a byte ceiling long before a char one.
+const GOOGLE_CHAT_TEXT_MAX_BYTES = 4096;
+// Mattermost and Rocket.Chat accept the Slack shape but cap lower than
+// Slack's own 40000, so the shared renderer uses the smallest of the family.
+const SLACK_TEXT_MAX = 16383;
 
 /**
  * Slack treats &, < and > as control characters, so a raw card title can carry
  * <!channel>, <@U123> or a <url|label> link through Kan and into a workspace.
  * Card titles are editable by any board member, so they are untrusted text.
- * Escape before composing, then truncate, so a cut can never split an entity
- * back into a live control character.
+ * Applied to the composed summary and before truncation, so a cut can never
+ * split an entity back into a live control character. Discord is not escaped:
+ * it does not use HTML entities, and mentions are suppressed there with
+ * allowed_mentions instead.
  */
 function escapeChatControlChars(value: string): string {
   return value
@@ -25,7 +32,17 @@ function escapeChatControlChars(value: string): string {
 }
 
 function truncate(value: string, max: number): string {
-  return value.length <= max ? value : `${value.slice(0, max - 1)}\u2026`;
+  if (value.length <= max) return value;
+  // Iterate code points, not UTF-16 code units: slicing mid-surrogate emits a
+  // lone surrogate, which Discord's embed validator rejects with the same 400
+  // this module exists to avoid. Budget is still measured in code units,
+  // because that is the unit the targets count.
+  let out = "";
+  for (const codePoint of value) {
+    if (out.length + codePoint.length > max - 1) break;
+    out += codePoint;
+  }
+  return `${out}\u2026`;
 }
 
 const eventLabels: Record<WebhookPayload["event"], string> = {
@@ -91,11 +108,27 @@ function toSlack(payload: WebhookPayload) {
   };
 }
 
+function truncateBytes(value: string, maxBytes: number): string {
+  const encoder = new TextEncoder();
+  if (encoder.encode(value).length <= maxBytes) return value;
+
+  let out = "";
+  let used = 0;
+  for (const codePoint of value) {
+    const size = encoder.encode(codePoint).length;
+    // Leave room for the ellipsis, which is 3 bytes in UTF-8.
+    if (used + size > maxBytes - 3) break;
+    out += codePoint;
+    used += size;
+  }
+  return `${out}\u2026`;
+}
+
 function toGoogleChat(payload: WebhookPayload) {
   return {
-    text: truncate(
+    text: truncateBytes(
       escapeChatControlChars(plainSummary(payload)),
-      GOOGLE_CHAT_TEXT_MAX,
+      GOOGLE_CHAT_TEXT_MAX_BYTES,
     ),
   };
 }
@@ -127,7 +160,11 @@ export function renderWebhookBody(
       // into no request body at all. Runtime: a row written by a newer migration
       // than this code falls back to the envelope instead of sending nothing.
       assertRendererExists(format);
-      return payload;
+      // Reached only when the row holds a format this build has no renderer for
+      // (a newer migration than the running code). Posting the Kan envelope at a
+      // chat URL would just reproduce the original 400, so fail closed instead:
+      // sendWebhookToUrl catches this and records a delivery failure.
+      throw new Error(`No renderer for webhook format: ${String(format)}`);
   }
 }
 

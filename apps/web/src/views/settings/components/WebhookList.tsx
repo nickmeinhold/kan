@@ -15,6 +15,7 @@ interface TableRowProps {
   name?: string;
   url?: string;
   events?: string[];
+  format?: string;
   active?: boolean;
   createdAt?: Date | null;
   dateLocale?: DateFnsLocale;
@@ -41,6 +42,7 @@ function TableRow({
   name,
   url,
   events,
+  format,
   active,
   createdAt,
   dateLocale,
@@ -81,7 +83,7 @@ function TableRow({
           {url}
         </p>
       </td>
-      <td className="w-[20%] px-3 py-4">
+      <td className="w-[14%] px-3 py-4">
         <p
           className={twMerge(
             "text-sm text-light-900 dark:text-dark-900",
@@ -90,6 +92,17 @@ function TableRow({
           )}
         >
           {events && formatEvents(events)}
+        </p>
+      </td>
+      <td className="w-[6%] px-3 py-4">
+        <p
+          className={twMerge(
+            "text-sm text-light-900 dark:text-dark-900",
+            showSkeleton &&
+              "h-3 w-[60px] animate-pulse rounded-sm bg-light-200 dark:bg-dark-200",
+          )}
+        >
+          {format}
         </p>
       </td>
       <td className="w-[10%] px-3 py-4">
@@ -221,9 +234,15 @@ export default function WebhookList({ workspacePublicId }: WebhookListProps) {
                   </th>
                   <th
                     scope="col"
-                    className="w-[20%] px-3 py-3.5 text-left text-sm font-semibold text-light-900 dark:text-dark-900"
+                    className="w-[14%] px-3 py-3.5 text-left text-sm font-semibold text-light-900 dark:text-dark-900"
                   >
                     {t`Events`}
+                  </th>
+                  <th
+                    scope="col"
+                    className="w-[6%] px-3 py-3.5 text-left text-sm font-semibold text-light-900 dark:text-dark-900"
+                  >
+                    {t`Format`}
                   </th>
                   <th
                     scope="col"
@@ -254,6 +273,7 @@ export default function WebhookList({ workspacePublicId }: WebhookListProps) {
                       name={webhook.name}
                       url={webhook.url}
                       events={webhook.events}
+                      format={webhook.format}
                       active={webhook.active}
                       createdAt={webhook.createdAt}
                       dateLocale={dateLocale}

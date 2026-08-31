@@ -80,6 +80,27 @@ describe("renderWebhookBody", () => {
       },
     };
 
+    it("never splits a surrogate pair when truncating", () => {
+      // "A".repeat(2000) is a BMP-only tuning fork: it cannot detect a cut
+      // through an emoji. A lone surrogate is invalid UTF-16 and Discord's
+      // embed validator rejects it - the same 400 this module prevents.
+      const emojiTitle = "\u{1F680}".repeat(500); // rocket, one surrogate pair each
+      const body = renderWebhookBody("discord", {
+        ...basePayload,
+        data: {
+          ...basePayload.data,
+          card: { ...basePayload.data.card, title: emojiTitle },
+        },
+      }) as { embeds: { title: string }[] };
+      const title = body.embeds[0]!.title;
+
+      expect(title.length).toBeLessThanOrEqual(256);
+      // A lone surrogate survives a round-trip through JSON as an escape;
+      // matching one directly is the clearest assertion.
+      expect(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/.test(title)).toBe(false);
+      expect(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(title)).toBe(false);
+    });
+
     it("keeps the Discord embed title within 256 characters", () => {
       const body = renderWebhookBody("discord", longPayload) as {
         embeds: { title: string }[];
@@ -115,12 +136,30 @@ describe("renderWebhookBody", () => {
       expect(total).toBeLessThanOrEqual(6000);
     });
 
-    it("keeps Google Chat text within 4096 characters", () => {
+    it("keeps Google Chat text within 4096 UTF-8 bytes", () => {
       const body = renderWebhookBody("googleChat", longPayload) as {
         text: string;
       };
 
-      expect(body.text.length).toBeLessThanOrEqual(4096);
+      expect(new TextEncoder().encode(body.text).length).toBeLessThanOrEqual(
+        4096,
+      );
+    });
+
+    it("counts multi-byte characters against the Google Chat byte budget", () => {
+      // 2000 CJK characters is ~6000 UTF-8 bytes: within any character-based
+      // ceiling, past a byte-based one.
+      const body = renderWebhookBody("googleChat", {
+        ...basePayload,
+        data: {
+          ...basePayload.data,
+          card: { ...basePayload.data.card, title: "\u6f22".repeat(2000) },
+        },
+      }) as { text: string };
+
+      expect(new TextEncoder().encode(body.text).length).toBeLessThanOrEqual(
+        4096,
+      );
     });
 
     it("still identifies the card after truncating", () => {
