@@ -270,6 +270,7 @@ describe("webhook router", () => {
         url: undefined,
         secret: undefined,
         events: undefined,
+        format: undefined,
         active: undefined,
       });
     });

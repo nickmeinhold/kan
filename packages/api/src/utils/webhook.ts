@@ -135,15 +135,27 @@ export async function sendWebhookToUrl(
     return { success: false, error: result.error.issues[0]?.message };
   }
 
-  const body = JSON.stringify(renderWebhookBody(format, payload));
+  // Rendering and signing are inside the try: a throw here would otherwise
+  // escape as a rejected promise that never reaches the delivery-failure log.
+  let body: string;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "X-Webhook-Event": payload.event,
     "X-Webhook-Timestamp": payload.timestamp,
   };
 
-  if (secret) {
-    headers["X-Webhook-Signature"] = generateSignature(body, secret);
+  try {
+    body = JSON.stringify(renderWebhookBody(format, payload));
+    if (secret) {
+      headers["X-Webhook-Signature"] = generateSignature(body, secret);
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: `Failed to render ${format} payload: ${
+        error instanceof Error ? error.message : "unknown error"
+      }`,
+    };
   }
 
   const controller = new AbortController();

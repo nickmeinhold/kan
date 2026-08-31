@@ -618,7 +618,9 @@ describe("webhook payload formats at delivery", () => {
       "generic",
     );
 
-    expect(JSON.parse(sentRequest().body)).toEqual(payload);
+    // Byte-level, not JSON.parse+toEqual: this is a wire-format promise, so key
+    // order and encoding matter to a consumer, not just structural equality.
+    expect(sentRequest().body).toBe(JSON.stringify(payload));
   });
 
   it("defaults to the generic envelope when no format is given", async () => {

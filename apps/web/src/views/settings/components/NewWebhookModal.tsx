@@ -5,6 +5,7 @@ import { Controller, useForm } from "react-hook-form";
 import { HiXMark } from "react-icons/hi2";
 import { z } from "zod";
 
+import type { WebhookFormat } from "@kan/db/schema";
 import { webhookEvents, webhookFormats } from "@kan/db/schema";
 
 import Button from "~/components/Button";
@@ -12,6 +13,15 @@ import Input from "~/components/Input";
 import { useModal } from "~/providers/modal";
 import { usePopup } from "~/providers/popup";
 import { api } from "~/utils/api";
+
+// Typed by WebhookFormat, so adding a format without a label fails the build
+// rather than rendering a blank option.
+const formatLabels: Record<WebhookFormat, string> = {
+  generic: "Generic JSON (default)",
+  discord: "Discord",
+  slack: "Slack, Mattermost or Rocket.Chat",
+  googleChat: "Google Chat",
+};
 
 const newWebhookSchema = z.object({
   name: z
@@ -284,10 +294,11 @@ export function NewWebhookModal({
               {...register("format")}
               className="block w-full rounded-md border border-light-600 bg-light-50 px-3 py-2 text-sm text-light-900 focus:border-light-700 focus:outline-none dark:border-dark-500 dark:bg-dark-300 dark:text-dark-900"
             >
-              <option value="generic">{t`Generic JSON (default)`}</option>
-              <option value="discord">{t`Discord`}</option>
-              <option value="slack">{t`Slack, Mattermost or Rocket.Chat`}</option>
-              <option value="googleChat">{t`Google Chat`}</option>
+              {webhookFormats.map((format) => (
+                <option key={format} value={format}>
+                  {formatLabels[format]}
+                </option>
+              ))}
             </select>
             <p className="mt-1 text-xs text-neutral-500 dark:text-dark-800">
               {t`Chat services only accept their own message format and reject anything else. Choose the one matching your URL, or keep Generic JSON for your own endpoint.`}
