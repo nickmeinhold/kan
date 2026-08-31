@@ -4,6 +4,7 @@ import {
   bigserial,
   boolean,
   index,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -22,6 +23,24 @@ export const webhookEvents = [
 ] as const;
 export type WebhookEvent = (typeof webhookEvents)[number];
 
+/**
+ * Body shape a webhook is rendered into before delivery.
+ *
+ * "generic" sends the Kan payload unchanged. The chat formats exist because
+ * their endpoints reject a body that does not match their own schema - e.g.
+ * Discord requires one of content/embeds/components/file/poll and 400s
+ * otherwise. Mattermost and Rocket.Chat accept the same body shape as Slack but
+ * use a different mention grammar, so they are not folded into "slack".
+ */
+export const webhookFormats = [
+  "generic",
+  "discord",
+  "slack",
+  "googleChat",
+] as const;
+export type WebhookFormat = (typeof webhookFormats)[number];
+export const webhookFormatEnum = pgEnum("webhook_format", webhookFormats);
+
 export const workspaceWebhooks = pgTable("workspace_webhooks", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   publicId: varchar("publicId", { length: 12 }).notNull().unique(),
@@ -32,6 +51,7 @@ export const workspaceWebhooks = pgTable("workspace_webhooks", {
   url: varchar("url", { length: 2048 }).notNull(),
   secret: text("secret"),
   events: text("events").notNull(), // JSON array of webhook events
+  format: webhookFormatEnum("format").notNull().default("generic"),
   active: boolean("active").notNull().default(true),
   createdBy: uuid("createdBy")
     .notNull()

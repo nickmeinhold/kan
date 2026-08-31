@@ -134,6 +134,57 @@ describe("webhook repository integration tests", () => {
     });
   });
 
+  describe("format", () => {
+    it("defaults to generic when not supplied", async () => {
+      const webhook = await webhookRepo.create(db, {
+        workspaceId: testWorkspace.id,
+        name: "Default format",
+        url: "https://example.com/webhook",
+        events: ["card.created"],
+        createdBy: testUser.id,
+      });
+
+      expect(webhook!.format).toBe("generic");
+    });
+
+    it("round-trips a chat format through the delivery query", async () => {
+      await webhookRepo.create(db, {
+        workspaceId: testWorkspace.id,
+        name: "Discord",
+        url: "https://discord.com/api/webhooks/1/token",
+        events: ["card.created"],
+        format: "discord",
+        createdBy: testUser.id,
+      });
+
+      // getActiveByWorkspaceId is what delivery reads; if it omits format,
+      // every webhook silently falls back to generic.
+      const active = await webhookRepo.getActiveByWorkspaceId(
+        db,
+        testWorkspace.id,
+      );
+
+      expect(active).toHaveLength(1);
+      expect(active[0]!.format).toBe("discord");
+    });
+
+    it("updates the format of an existing webhook", async () => {
+      const created = await webhookRepo.create(db, {
+        workspaceId: testWorkspace.id,
+        name: "Was generic",
+        url: "https://example.com/webhook",
+        events: ["card.created"],
+        createdBy: testUser.id,
+      });
+
+      const updated = await webhookRepo.update(db, created!.publicId, {
+        format: "slack",
+      });
+
+      expect(updated!.format).toBe("slack");
+    });
+  });
+
   describe("update", () => {
     it("updates webhook name", async () => {
       const created = await webhookRepo.create(db, {

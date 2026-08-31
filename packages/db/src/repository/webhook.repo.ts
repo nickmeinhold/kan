@@ -4,7 +4,7 @@ import type { dbClient } from "@kan/db/client";
 import { workspaceWebhooks } from "@kan/db/schema";
 import { generateUID } from "@kan/shared/utils";
 
-import type { WebhookEvent } from "../schema/webhooks";
+import type { WebhookEvent, WebhookFormat } from "../schema/webhooks";
 
 /** Parse JSON-encoded events column into typed array */
 function parseEvents(raw: string): WebhookEvent[] {
@@ -19,6 +19,7 @@ export const create = async (
     url: string;
     secret?: string;
     events: WebhookEvent[];
+    format?: WebhookFormat;
     createdBy: string;
   },
 ) => {
@@ -31,6 +32,7 @@ export const create = async (
       url: webhookInput.url,
       secret: webhookInput.secret,
       events: JSON.stringify(webhookInput.events),
+      format: webhookInput.format,
       createdBy: webhookInput.createdBy,
     })
     .returning({
@@ -38,6 +40,7 @@ export const create = async (
       name: workspaceWebhooks.name,
       url: workspaceWebhooks.url,
       events: workspaceWebhooks.events,
+      format: workspaceWebhooks.format,
       active: workspaceWebhooks.active,
       createdAt: workspaceWebhooks.createdAt,
     });
@@ -58,6 +61,7 @@ export const update = async (
     url?: string;
     secret?: string;
     events?: WebhookEvent[];
+    format?: WebhookFormat;
     active?: boolean;
   },
 ) => {
@@ -70,6 +74,7 @@ export const update = async (
       events: webhookInput.events
         ? JSON.stringify(webhookInput.events)
         : undefined,
+      format: webhookInput.format,
       active: webhookInput.active,
       updatedAt: new Date(),
     })
@@ -79,6 +84,7 @@ export const update = async (
       name: workspaceWebhooks.name,
       url: workspaceWebhooks.url,
       events: workspaceWebhooks.events,
+      format: workspaceWebhooks.format,
       active: workspaceWebhooks.active,
       createdAt: workspaceWebhooks.createdAt,
       updatedAt: workspaceWebhooks.updatedAt,
@@ -102,6 +108,7 @@ export const getByPublicId = async (db: dbClient, webhookPublicId: string) => {
       url: true,
       secret: true,
       events: true,
+      format: true,
       active: true,
       createdAt: true,
       updatedAt: true,
@@ -127,6 +134,7 @@ export const getAllByWorkspaceId = async (
       name: true,
       url: true,
       events: true,
+      format: true,
       active: true,
       createdAt: true,
       updatedAt: true,
@@ -155,6 +163,7 @@ export const getActiveByWorkspaceId = async (
       url: true,
       secret: true,
       events: true,
+      format: true,
     },
     where: and(
       eq(workspaceWebhooks.workspaceId, workspaceId),

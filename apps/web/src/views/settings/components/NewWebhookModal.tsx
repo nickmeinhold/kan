@@ -5,13 +5,31 @@ import { Controller, useForm } from "react-hook-form";
 import { HiXMark } from "react-icons/hi2";
 import { z } from "zod";
 
-import { webhookEvents } from "@kan/db/schema";
+import type { WebhookFormat } from "@kan/db/schema";
+import { webhookEvents, webhookFormats } from "@kan/db/schema";
 
 import Button from "~/components/Button";
 import Input from "~/components/Input";
 import { useModal } from "~/providers/modal";
 import { usePopup } from "~/providers/popup";
 import { api } from "~/utils/api";
+
+// Typed by WebhookFormat, so adding a format without a label fails the build
+// rather than rendering a blank option.
+// modalState is Record<string, any>, so nothing upstream guarantees this is a
+// real format. Validate at the boundary: an unrecognised value must not be
+// silently rewritten to "generic" on save, which would retune a working
+// webhook back to the payload shape its target rejects.
+const isWebhookFormat = (value: unknown): value is WebhookFormat =>
+  typeof value === "string" &&
+  (webhookFormats as readonly string[]).includes(value);
+
+const formatLabels: Record<WebhookFormat, string> = {
+  generic: "Generic JSON (default)",
+  discord: "Discord",
+  slack: "Slack",
+  googleChat: "Google Chat",
+};
 
 const newWebhookSchema = z.object({
   name: z
@@ -30,6 +48,7 @@ const newWebhookSchema = z.object({
   events: z
     .array(z.enum(webhookEvents))
     .min(1, { message: t`Select at least one event` }),
+  format: z.enum(webhookFormats),
   active: z.boolean(),
 });
 
@@ -62,7 +81,7 @@ export function NewWebhookModal({
     handleSubmit,
     control,
     reset,
-    formState: { errors },
+    formState: { errors, dirtyFields },
   } = useForm<WebhookFormData>({
     resolver: zodResolver(newWebhookSchema),
     defaultValues: {
@@ -70,6 +89,7 @@ export function NewWebhookModal({
       url: "",
       secret: "",
       events: [...webhookEvents],
+      format: "generic",
       active: true,
     },
   });
@@ -81,6 +101,9 @@ export function NewWebhookModal({
         url: modalState.url ?? "",
         secret: "",
         events: modalState.events ?? ["card.created"],
+        format: isWebhookFormat(modalState.format)
+          ? modalState.format
+          : "generic",
         active: modalState.active ?? true,
       });
     } else if (!isEdit) {
@@ -89,6 +112,7 @@ export function NewWebhookModal({
         url: "",
         secret: "",
         events: [...webhookEvents],
+        format: "generic",
         active: true,
       });
     }
@@ -177,6 +201,13 @@ export function NewWebhookModal({
         url: data.url,
         secret: data.secret || undefined,
         events: data.events,
+        // Omitting format leaves the stored value untouched. Only write it when
+        // the modal was seeded with a real one or the user picked one, so a
+        // stale modal cannot silently downgrade the webhook to generic.
+        format:
+          isWebhookFormat(modalState?.format) || dirtyFields.format
+            ? data.format
+            : undefined,
         active: data.active,
       });
     } else {
@@ -186,6 +217,7 @@ export function NewWebhookModal({
         url: data.url,
         secret: data.secret || undefined,
         events: data.events,
+        format: data.format,
       });
     }
   };
@@ -263,6 +295,29 @@ export function NewWebhookModal({
             />
             <p className="mt-1 text-xs text-neutral-500 dark:text-dark-800">
               {t`Used to sign webhook payloads for verification. Leave blank to keep existing secret.`}
+            </p>
+          </div>
+
+          <div>
+            <label
+              htmlFor="format"
+              className="mb-1 block text-sm font-medium text-light-900 dark:text-dark-900"
+            >
+              {t`Payload format`}
+            </label>
+            <select
+              id="format"
+              {...register("format")}
+              className="block w-full rounded-md border border-light-600 bg-light-50 px-3 py-2 text-sm text-light-900 focus:border-light-700 focus:outline-none dark:border-dark-500 dark:bg-dark-300 dark:text-dark-900"
+            >
+              {webhookFormats.map((format) => (
+                <option key={format} value={format}>
+                  {formatLabels[format]}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-neutral-500 dark:text-dark-800">
+              {t`Chat services only accept their own message format and reject anything else. Choose the one matching your URL, or keep Generic JSON for your own endpoint.`}
             </p>
           </div>
 

@@ -2,9 +2,11 @@ import crypto from "crypto";
 import { z } from "zod";
 
 import type { dbClient } from "@kan/db/client";
-import type { WebhookEvent } from "@kan/db/schema";
+import type { WebhookEvent, WebhookFormat } from "@kan/db/schema";
 import * as webhookRepo from "@kan/db/repository/webhook.repo";
 import { createLogger } from "@kan/logger";
+
+import { renderWebhookBody } from "./webhookFormats";
 
 const log = createLogger("webhook");
 
@@ -126,21 +128,34 @@ export async function sendWebhookToUrl(
   url: string,
   secret: string | undefined,
   payload: WebhookPayload,
+  format: WebhookFormat = "generic",
 ): Promise<{ success: boolean; statusCode?: number; error?: string }> {
   const result = webhookUrlSchema.safeParse(url);
   if (!result.success) {
     return { success: false, error: result.error.issues[0]?.message };
   }
 
-  const body = JSON.stringify(payload);
+  // Rendering and signing are inside the try: a throw here would otherwise
+  // escape as a rejected promise that never reaches the delivery-failure log.
+  let body: string;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "X-Webhook-Event": payload.event,
     "X-Webhook-Timestamp": payload.timestamp,
   };
 
-  if (secret) {
-    headers["X-Webhook-Signature"] = generateSignature(body, secret);
+  try {
+    body = JSON.stringify(renderWebhookBody(format, payload));
+    if (secret) {
+      headers["X-Webhook-Signature"] = generateSignature(body, secret);
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: `Failed to render ${format} payload: ${
+        error instanceof Error ? error.message : "unknown error"
+      }`,
+    };
   }
 
   const controller = new AbortController();
@@ -200,7 +215,7 @@ export async function sendWebhooksForWorkspace(
 
     // Send to all subscribed webhooks in parallel (fire and forget)
     const promises = webhooksForEvent.map((webhook) =>
-      sendWebhookToUrl(webhook.url, webhook.secret ?? undefined, payload).then(
+      sendWebhookToUrl(webhook.url, webhook.secret ?? undefined, payload, webhook.format).then(
         (result) => {
           if (!result.success) {
             log.error({ url: webhook.url, event: payload.event, error: result.error, statusCode: result.statusCode }, "Webhook delivery failed");

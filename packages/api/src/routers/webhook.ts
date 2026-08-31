@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import * as webhookRepo from "@kan/db/repository/webhook.repo";
 import * as workspaceRepo from "@kan/db/repository/workspace.repo";
-import { webhookEvents } from "@kan/db/schema";
+import { webhookEvents, webhookFormats } from "@kan/db/schema";
 
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { assertPermission } from "../utils/permissions";
@@ -14,6 +14,7 @@ import {
 } from "../utils/webhook";
 
 const webhookEventSchema = z.enum(webhookEvents);
+const webhookFormatSchema = z.enum(webhookFormats);
 
 export const webhookRouter = createTRPCRouter({
   list: protectedProcedure
@@ -35,6 +36,7 @@ export const webhookRouter = createTRPCRouter({
           name: z.string(),
           url: z.string(),
           events: z.array(webhookEventSchema),
+          format: webhookFormatSchema,
           active: z.boolean(),
           createdAt: z.date(),
           updatedAt: z.date().nullable(),
@@ -84,6 +86,7 @@ export const webhookRouter = createTRPCRouter({
         url: webhookUrlSchema,
         secret: z.string().max(512).optional(),
         events: z.array(webhookEventSchema).min(1),
+        format: webhookFormatSchema.optional(),
       }),
     )
     .output(
@@ -92,6 +95,7 @@ export const webhookRouter = createTRPCRouter({
         name: z.string(),
         url: z.string(),
         events: z.array(webhookEventSchema),
+        format: webhookFormatSchema,
         active: z.boolean(),
         createdAt: z.date(),
       }),
@@ -124,6 +128,7 @@ export const webhookRouter = createTRPCRouter({
         url: input.url,
         secret: input.secret,
         events: input.events,
+        format: input.format,
         createdBy: userId,
       });
 
@@ -155,6 +160,7 @@ export const webhookRouter = createTRPCRouter({
         url: webhookUrlSchema.optional(),
         secret: z.string().max(512).optional(),
         events: z.array(webhookEventSchema).min(1).optional(),
+        format: webhookFormatSchema.optional(),
         active: z.boolean().optional(),
       }),
     )
@@ -164,6 +170,7 @@ export const webhookRouter = createTRPCRouter({
         name: z.string(),
         url: z.string(),
         events: z.array(webhookEventSchema),
+        format: webhookFormatSchema,
         active: z.boolean(),
         createdAt: z.date(),
         updatedAt: z.date().nullable(),
@@ -207,6 +214,7 @@ export const webhookRouter = createTRPCRouter({
         url: input.url,
         secret: input.secret,
         events: input.events,
+        format: input.format,
         active: input.active,
       });
 
@@ -353,6 +361,7 @@ export const webhookRouter = createTRPCRouter({
         webhook.url,
         webhook.secret ?? undefined,
         testPayload,
+        webhook.format,
       );
 
       return result;

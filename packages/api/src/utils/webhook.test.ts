@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const { mockLogger } = vi.hoisted(() => ({
@@ -571,5 +572,116 @@ describe("webhook utilities", () => {
     it("rejects cloud metadata endpoints", () => {
       expect(webhookUrlSchema.safeParse("https://169.254.169.254/latest").success).toBe(false);
     });
+  });
+});
+
+describe("webhook payload formats at delivery", () => {
+  const originalFetch = global.fetch;
+
+  const payload: WebhookPayload = {
+    event: "card.created",
+    timestamp: "2024-01-15T12:00:00.000Z",
+    data: {
+      card: {
+        id: "card-123",
+        publicId: "card-pub-123",
+        title: "Test Card",
+        listId: "list-456",
+        boardId: "board-789",
+      },
+      board: { id: "board-789", name: "Engineering" },
+    },
+  };
+
+  beforeEach(() => {
+    global.fetch = vi.fn();
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      status: 200,
+    });
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  const sentRequest = () => {
+    const call = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    return call?.[1] as { headers: Record<string, string>; body: string };
+  };
+
+  it("sends the Kan envelope unchanged for the generic format", async () => {
+    await sendWebhookToUrl(
+      "https://example.com/webhook",
+      undefined,
+      payload,
+      "generic",
+    );
+
+    // Byte-level, not JSON.parse+toEqual: this is a wire-format promise, so key
+    // order and encoding matter to a consumer, not just structural equality.
+    expect(sentRequest().body).toBe(JSON.stringify(payload));
+  });
+
+  it("defaults to the generic envelope when no format is given", async () => {
+    await sendWebhookToUrl("https://example.com/webhook", undefined, payload);
+
+    expect(JSON.parse(sentRequest().body)).toEqual(payload);
+  });
+
+  it("sends a body Discord accepts when the format is discord", async () => {
+    await sendWebhookToUrl(
+      "https://discord.com/api/webhooks/1/token",
+      undefined,
+      payload,
+      "discord",
+    );
+
+    const body = JSON.parse(sentRequest().body) as Record<string, unknown>;
+
+    // Discord 400s on a body carrying none of these fields - the reported bug.
+    expect(
+      ["content", "embeds", "components", "file", "poll"].some(
+        (key) => key in body,
+      ),
+    ).toBe(true);
+    expect("event" in body).toBe(false);
+  });
+
+  it("sends a text field for slack and googleChat", async () => {
+    for (const format of ["slack", "googleChat"] as const) {
+      global.fetch = vi.fn();
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        status: 200,
+      });
+
+      await sendWebhookToUrl(
+        "https://example.com/webhook",
+        undefined,
+        payload,
+        format,
+      );
+
+      const body = JSON.parse(sentRequest().body) as { text?: string };
+      expect(body.text).toContain("Test Card");
+    }
+  });
+
+  it("signs the body that is actually sent, not the Kan envelope", async () => {
+    await sendWebhookToUrl(
+      "https://discord.com/api/webhooks/1/token",
+      "shhh",
+      payload,
+      "discord",
+    );
+
+    const { headers, body } = sentRequest();
+    const expected = crypto
+      .createHmac("sha256", "shhh")
+      .update(body)
+      .digest("hex");
+
+    expect(headers["X-Webhook-Signature"]).toBe(expected);
   });
 });
