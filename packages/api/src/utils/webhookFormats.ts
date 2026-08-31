@@ -11,8 +11,9 @@ const DISCORD_DESCRIPTION_MAX = 4096;
 // so this budget is spent in UTF-8 bytes: the stricter reading is safe under
 // either, and a CJK title would exceed a byte ceiling long before a char one.
 const GOOGLE_CHAT_TEXT_MAX_BYTES = 4096;
-// Mattermost and Rocket.Chat accept the Slack shape but cap lower than
-// Slack's own 40000, so the shared renderer uses the smallest of the family.
+// A conservative ceiling rather than Slack's documented maximum, which is far
+// larger than anything Kan can currently produce. It guards against future
+// field growth, not against Slack itself.
 const SLACK_TEXT_MAX = 16383;
 
 /**
@@ -23,6 +24,10 @@ const SLACK_TEXT_MAX = 16383;
  * split an entity back into a live control character. Discord is not escaped:
  * it does not use HTML entities, and mentions are suppressed there with
  * allowed_mentions instead.
+ *
+ * This handles Slack's grammar only. Mattermost and Rocket.Chat accept the same
+ * body shape but mention with bare @channel / @all / @here, which these entities
+ * do not touch, so they are deliberately not offered as targets here.
  */
 function escapeChatControlChars(value: string): string {
   return value

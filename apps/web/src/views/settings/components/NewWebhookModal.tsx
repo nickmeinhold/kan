@@ -27,7 +27,7 @@ const isWebhookFormat = (value: unknown): value is WebhookFormat =>
 const formatLabels: Record<WebhookFormat, string> = {
   generic: "Generic JSON (default)",
   discord: "Discord",
-  slack: "Slack, Mattermost or Rocket.Chat",
+  slack: "Slack",
   googleChat: "Google Chat",
 };
 

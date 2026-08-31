@@ -29,7 +29,8 @@ export type WebhookEvent = (typeof webhookEvents)[number];
  * "generic" sends the Kan payload unchanged. The chat formats exist because
  * their endpoints reject a body that does not match their own schema - e.g.
  * Discord requires one of content/embeds/components/file/poll and 400s
- * otherwise. Rocket.Chat and Mattermost accept the "slack" shape.
+ * otherwise. Mattermost and Rocket.Chat accept the same body shape as Slack but
+ * use a different mention grammar, so they are not folded into "slack".
  */
 export const webhookFormats = [
   "generic",
