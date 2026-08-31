@@ -55,7 +55,7 @@ i18n.cache
 # pgdata
 /apps/web/pgdata
 
-# local scripts
-scripts/
-
 .claude
+
+# security audit
+security-audit-*.md
