@@ -264,6 +264,7 @@ export default function WebhookList({ workspacePublicId }: WebhookListProps) {
                           name: webhook.name,
                           url: webhook.url,
                           events: webhook.events,
+                          format: webhook.format,
                           active: webhook.active,
                         });
                         openModal("EDIT_WEBHOOK", webhook.publicId, webhook.name);

@@ -5,7 +5,7 @@ import { Controller, useForm } from "react-hook-form";
 import { HiXMark } from "react-icons/hi2";
 import { z } from "zod";
 
-import { webhookEvents } from "@kan/db/schema";
+import { webhookEvents, webhookFormats } from "@kan/db/schema";
 
 import Button from "~/components/Button";
 import Input from "~/components/Input";
@@ -30,6 +30,7 @@ const newWebhookSchema = z.object({
   events: z
     .array(z.enum(webhookEvents))
     .min(1, { message: t`Select at least one event` }),
+  format: z.enum(webhookFormats),
   active: z.boolean(),
 });
 
@@ -70,6 +71,7 @@ export function NewWebhookModal({
       url: "",
       secret: "",
       events: [...webhookEvents],
+      format: "generic",
       active: true,
     },
   });
@@ -81,6 +83,7 @@ export function NewWebhookModal({
         url: modalState.url ?? "",
         secret: "",
         events: modalState.events ?? ["card.created"],
+        format: modalState.format ?? "generic",
         active: modalState.active ?? true,
       });
     } else if (!isEdit) {
@@ -89,6 +92,7 @@ export function NewWebhookModal({
         url: "",
         secret: "",
         events: [...webhookEvents],
+        format: "generic",
         active: true,
       });
     }
@@ -177,6 +181,7 @@ export function NewWebhookModal({
         url: data.url,
         secret: data.secret || undefined,
         events: data.events,
+        format: data.format,
         active: data.active,
       });
     } else {
@@ -186,6 +191,7 @@ export function NewWebhookModal({
         url: data.url,
         secret: data.secret || undefined,
         events: data.events,
+        format: data.format,
       });
     }
   };
@@ -263,6 +269,28 @@ export function NewWebhookModal({
             />
             <p className="mt-1 text-xs text-neutral-500 dark:text-dark-800">
               {t`Used to sign webhook payloads for verification. Leave blank to keep existing secret.`}
+            </p>
+          </div>
+
+          <div>
+            <label
+              htmlFor="format"
+              className="mb-1 block text-sm font-medium text-light-900 dark:text-dark-900"
+            >
+              {t`Payload format`}
+            </label>
+            <select
+              id="format"
+              {...register("format")}
+              className="block w-full rounded-md border border-light-600 bg-light-50 px-3 py-2 text-sm text-light-900 focus:border-light-700 focus:outline-none dark:border-dark-500 dark:bg-dark-300 dark:text-dark-900"
+            >
+              <option value="generic">{t`Generic JSON (default)`}</option>
+              <option value="discord">{t`Discord`}</option>
+              <option value="slack">{t`Slack, Mattermost or Rocket.Chat`}</option>
+              <option value="googleChat">{t`Google Chat`}</option>
+            </select>
+            <p className="mt-1 text-xs text-neutral-500 dark:text-dark-800">
+              {t`Chat services only accept their own message format and reject anything else. Choose the one matching your URL, or keep Generic JSON for your own endpoint.`}
             </p>
           </div>
 

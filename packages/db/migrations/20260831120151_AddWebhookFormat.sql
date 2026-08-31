@@ -1,0 +1,2 @@
+CREATE TYPE "public"."webhook_format" AS ENUM('generic', 'discord', 'slack', 'googleChat');--> statement-breakpoint
+ALTER TABLE "workspace_webhooks" ADD COLUMN "format" "webhook_format" DEFAULT 'generic' NOT NULL;
