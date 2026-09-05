@@ -2,13 +2,17 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import * as cardRepo from "@kan/db/repository/card.repo";
+import { CardLabelBoardError } from "@kan/db/repository/card.repo";
 import * as cardActivityRepo from "@kan/db/repository/cardActivity.repo";
 import * as cardCommentRepo from "@kan/db/repository/cardComment.repo";
 import * as checklistRepo from "@kan/db/repository/checklist.repo";
 import * as labelRepo from "@kan/db/repository/label.repo";
 import * as listRepo from "@kan/db/repository/list.repo";
 import * as workspaceRepo from "@kan/db/repository/workspace.repo";
-import { generateAttachmentUrl, generateAvatarUrl } from "@kan/shared/utils";
+import {
+  generateAttachmentUrl,
+  normalizeDescription,
+} from "@kan/shared/utils";
 
 import {
   activityItemSchema,
@@ -20,6 +24,7 @@ import {
 } from "../schemas";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 import { mergeActivities } from "../utils/activities";
+import { createAvatarUrlResolver } from "../utils/avatarUrls";
 import { sendMentionEmails } from "../utils/notifications";
 import {
   assertCanDelete,
@@ -77,9 +82,51 @@ export const cardRouter = createTRPCRouter({
 
       await assertPermission(ctx.db, userId, list.workspaceId, "card:create");
 
+      // Resolved before the card is created: the labels must belong to the
+      // board the card is being created on, and a rejection after cardRepo.create
+      // would leave the card behind with a 500 for what is a client-correctable
+      // input.
+      const labelsToLink = input.labelPublicIds.length
+        ? await labelRepo.getAllByPublicIds(ctx.db, input.labelPublicIds)
+        : [];
+
+      // Every requested label must resolve. Accepting a subset would create the
+      // card holding fewer labels than asked for, and report success.
+      const requestedLabelIds = [...new Set(input.labelPublicIds)];
+
+      if (labelsToLink.length !== requestedLabelIds.length)
+        throw new TRPCError({
+          message: `Labels with public IDs (${input.labelPublicIds.join(", ")}) not found`,
+          code: "NOT_FOUND",
+        });
+
+      const labelsFromAnotherBoard = labelsToLink.filter(
+        (label) => label.boardId !== list.boardId,
+      );
+
+      if (labelsFromAnotherBoard.length)
+        throw new TRPCError({
+          message: `Labels belong to a different board than list ${input.listPublicId}`,
+          code: "BAD_REQUEST",
+        });
+
+      const members = input.memberPublicIds.length
+        ? await workspaceRepo.getAllMembersByPublicIds(
+            ctx.db,
+            input.memberPublicIds,
+            list.workspaceId,
+          )
+        : [];
+
+      if (members.length !== new Set(input.memberPublicIds).size)
+        throw new TRPCError({
+          message: `Members with public IDs (${input.memberPublicIds.join(", ")}) not found`,
+          code: "NOT_FOUND",
+        });
+
       const newCard = await cardRepo.create(ctx.db, {
         title: input.title,
-        description: input.description,
+        description: normalizeDescription(input.description),
         createdBy: userId,
         listId: list.id,
         workspaceId: list.workspaceId,
@@ -95,19 +142,8 @@ export const cardRouter = createTRPCRouter({
           code: "INTERNAL_SERVER_ERROR",
         });
 
-      if (newCardId && input.labelPublicIds.length) {
-        const labels = await labelRepo.getAllByPublicIds(
-          ctx.db,
-          input.labelPublicIds,
-        );
-
-        if (!labels.length)
-          throw new TRPCError({
-            message: `Labels with public IDs (${input.labelPublicIds.join(", ")}) not found`,
-            code: "NOT_FOUND",
-          });
-
-        const labelsInsert = labels.map((label) => ({
+      if (newCardId && labelsToLink.length) {
+        const labelsInsert = labelsToLink.map((label) => ({
           cardId: newCardId,
           labelId: label.id,
         }));
@@ -133,18 +169,7 @@ export const cardRouter = createTRPCRouter({
         await cardActivityRepo.bulkCreate(ctx.db, cardActivitesInsert);
       }
 
-      if (newCardId && input.memberPublicIds.length) {
-        const members = await workspaceRepo.getAllMembersByPublicIds(
-          ctx.db,
-          input.memberPublicIds,
-        );
-
-        if (!members.length)
-          throw new TRPCError({
-            message: `Members with public IDs (${input.memberPublicIds.join(", ")}) not found`,
-            code: "NOT_FOUND",
-          });
-
+      if (newCardId && members.length) {
         const membersInsert = members.map((member) => ({
           cardId: newCardId,
           workspaceMemberId: member.id,
@@ -173,13 +198,12 @@ export const cardRouter = createTRPCRouter({
       }
 
       if (input.description) {
-        sendMentionEmails({
+        void sendMentionEmails({
           db: ctx.db,
           cardPublicId: newCard.publicId,
-          commentHtml: input.description,
+          previousHtml: null,
+          nextHtml: input.description,
           commenterUserId: userId,
-        }).catch((error) => {
-          console.error("Failed to send mention emails:", error);
         });
       }
 
@@ -277,14 +301,13 @@ export const cardRouter = createTRPCRouter({
         createdBy: userId,
       });
 
-      sendMentionEmails({
+      void sendMentionEmails({
         db: ctx.db,
         cardPublicId: input.cardPublicId,
-        commentHtml: input.comment,
+        previousHtml: null,
+        nextHtml: input.comment,
         commenterUserId: userId,
         commentId: newComment.id,
-      }).catch((error) => {
-        console.error("Failed to send mention emails:", error);
       });
 
       return newComment;
@@ -367,14 +390,13 @@ export const cardRouter = createTRPCRouter({
         createdBy: userId,
       });
 
-      sendMentionEmails({
+      void sendMentionEmails({
         db: ctx.db,
         cardPublicId: input.cardPublicId,
-        commentHtml: input.comment,
+        previousHtml: existingComment.comment,
+        nextHtml: input.comment,
         commenterUserId: userId,
         commentId: updatedComment.id,
-      }).catch((error) => {
-        console.error("Failed to send mention emails:", error);
       });
 
       return updatedComment;
@@ -531,8 +553,24 @@ export const cardRouter = createTRPCRouter({
         return { newLabel: false };
       }
 
-      const newCardLabelRelationship =
-        await cardRepo.createCardLabelRelationship(ctx.db, cardLabelIds);
+      // The public add-label path reaches the writer without pre-validating, so
+      // it maps the domain error rather than surfacing a 500 for what is a
+      // client-correctable input. A middleware could do this once for every
+      // transport, but that changes the error path for every procedure and
+      // belongs with the wider decision, not in a bug fix.
+      const newCardLabelRelationship = await cardRepo
+        .createCardLabelRelationship(ctx.db, cardLabelIds)
+        .catch((error: unknown) => {
+          if (error instanceof CardLabelBoardError)
+            throw new TRPCError({
+              message: error.message,
+              code:
+                error.violation === "board_mismatch"
+                  ? "BAD_REQUEST"
+                  : "NOT_FOUND",
+            });
+          throw error;
+        });
 
       if (!newCardLabelRelationship)
         throw new TRPCError({
@@ -591,6 +629,7 @@ export const cardRouter = createTRPCRouter({
       const member = await workspaceRepo.getMemberByPublicId(
         ctx.db,
         input.workspaceMemberPublicId,
+        card.workspaceId,
       );
 
       if (!member)
@@ -710,6 +749,7 @@ export const cardRouter = createTRPCRouter({
       );
 
       // Generate presigned URLs for workspace member avatars
+      const resolveAvatarUrl = createAvatarUrlResolver();
       const workspaceWithAvatarUrls = result.list.board.workspace
         ? {
             ...result.list.board.workspace,
@@ -719,7 +759,7 @@ export const cardRouter = createTRPCRouter({
                   return member;
                 }
 
-                const avatarUrl = await generateAvatarUrl(member.user.image);
+                const avatarUrl = await resolveAvatarUrl(member.user.image);
                 return {
                   ...member,
                   user: {
@@ -804,13 +844,14 @@ export const cardRouter = createTRPCRouter({
       );
 
       // Generate presigned URLs for user avatars in activities
+      const resolveAvatarUrl = createAvatarUrlResolver();
       const activitiesWithAvatarUrls = await Promise.all(
         result.activities.map(async (activity) => {
           const updatedActivity = { ...activity };
 
           // Generate presigned URL for activity user avatar
           if (activity.user?.image) {
-            const userAvatarUrl = await generateAvatarUrl(activity.user.image);
+            const userAvatarUrl = await resolveAvatarUrl(activity.user.image);
             updatedActivity.user = {
               ...activity.user,
               image: userAvatarUrl,
@@ -819,7 +860,7 @@ export const cardRouter = createTRPCRouter({
 
           // Generate presigned URL for member user avatar (if exists)
           if (activity.member?.user?.image) {
-            const memberAvatarUrl = await generateAvatarUrl(
+            const memberAvatarUrl = await resolveAvatarUrl(
               activity.member.user.image,
             );
             updatedActivity.member = {
@@ -987,13 +1028,12 @@ export const cardRouter = createTRPCRouter({
           toDescription: input.description,
         });
 
-        sendMentionEmails({
+        void sendMentionEmails({
           db: ctx.db,
           cardPublicId: input.cardPublicId,
-          commentHtml: input.description,
+          previousHtml: existingCard.description,
+          nextHtml: input.description,
           commenterUserId: userId,
-        }).catch((error) => {
-          console.error("Failed to send mention emails:", error);
         });
       }
 
@@ -1279,9 +1319,31 @@ export const cardRouter = createTRPCRouter({
           code: "NOT_FOUND",
         });
 
+      // Checked before the card exists. cardRepo.create opens its own
+      // transaction, so the router cannot roll it back: a refusal after this
+      // point leaves a duplicate behind, and the caller retrying as the error
+      // message suggests would make a second one.
+      const sourceLabels = sourceCard.labels ?? [];
+      const sourceLabelRecords = input.copyLabels && sourceLabels.length
+        ? await labelRepo.getAllByPublicIds(
+            ctx.db,
+            sourceLabels.map((label) => label.publicId),
+          )
+        : [];
+
+      if (
+        sourceLabelRecords.some(
+          (label) => label.boardId !== targetList.boardId,
+        )
+      )
+        throw new TRPCError({
+          message: `Cannot copy labels to a list on a different board. Labels belong to a board, so duplicate with copyLabels: false when the target list is on another board.`,
+          code: "BAD_REQUEST",
+        });
+
       const newCard = await cardRepo.create(ctx.db, {
         title: input.title ?? sourceCard.title,
-        description: sourceCard.description ?? "",
+        description: normalizeDescription(sourceCard.description),
         createdBy: userId,
         listId: targetList.id,
         workspaceId: targetList.workspaceId,
@@ -1297,12 +1359,8 @@ export const cardRouter = createTRPCRouter({
         });
       }
 
-      if (input.copyLabels && sourceCard.labels?.length) {
-        const labelPublicIds = sourceCard.labels.map((l) => l.publicId);
-        const labels = await labelRepo.getAllByPublicIds(
-          ctx.db,
-          labelPublicIds,
-        );
+      if (input.copyLabels && sourceLabelRecords.length) {
+        const labels = sourceLabelRecords;
         if (labels.length) {
           const labelsInsert = labels.map((label) => ({
             cardId: newCard.id,
@@ -1324,6 +1382,7 @@ export const cardRouter = createTRPCRouter({
         const members = await workspaceRepo.getAllMembersByPublicIds(
           ctx.db,
           memberPublicIds,
+          sourceCardMeta.workspaceId,
         );
         if (members.length) {
           const membersInsert = members.map((member) => ({
